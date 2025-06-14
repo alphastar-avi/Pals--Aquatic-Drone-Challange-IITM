@@ -8,3 +8,14 @@
 | `ECHO_PIN`   | 13  | HC-SR04 Echo Pin     |
 | `SERVO_PIN`  | 5   | Servo Signal Pin     |
 
+
+
+https://github.com/user-attachments/assets/670c3c9f-7b20-4f25-bc88-252d13476502
+
+# mavlink protocol for obstacle avoidance and waypoint 
+
+
+
+https://github.com/user-attachments/assets/62d8c342-50d7-40cc-95b1-e61671383893
+
+
