@@ -1,4 +1,4 @@
-# Pals--Aquatic-Drone-Challange-IITM
+# Servo And Ultrasonic Radar
 
 ### Servo Radar Pin Definitions
 
@@ -17,5 +17,13 @@ https://github.com/user-attachments/assets/670c3c9f-7b20-4f25-bc88-252d13476502
 
 
 https://github.com/user-attachments/assets/62d8c342-50d7-40cc-95b1-e61671383893
+
+
+# Waste Classifier Model
+
+
+
+
+https://github.com/user-attachments/assets/abc3b215-95af-4504-9c4c-8c648283f353
 
 
