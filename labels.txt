@@ -1,0 +1,4 @@
+0 Plastic waste
+1 Organic waste
+2 Metallic waste
+3 Other
