@@ -1,88 +1,89 @@
+import tensorflow as tf
+import numpy as np
+import os
+import json
+import sys
+import traceback
+from PIL import Image, ImageOps
+from tensorflow.keras.models import load_model # type: ignore
 
-MODEL_PATH = "path_to_your_new_model.h5"
-LABELS_PATH = "path_to_your_labels.txt"
+# Create a custom DepthwiseConv2D layer that ignores 'groups'
+class CustomDepthwiseConv2D(tf.keras.layers.DepthwiseConv2D):
+    def __init__(self, *args, groups=None, **kwargs):
+        if 'groups' in kwargs:
+            del kwargs['groups']
+        super().__init__(*args, **kwargs)
 
+# Helper logger
+def log(message):
+    print(f"LOG: {message}", file=sys.stderr)
 
+# Global paths
+MODEL_PATH = os.path.join("keras_model.h5")
+LABELS_PATH = os.path.join("labels.txt")
+
+# Verify existence of model and labels
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"Model file not found: {MODEL_PATH}")
+if not os.path.exists(LABELS_PATH):
+    raise FileNotFoundError(f"Labels file not found: {LABELS_PATH}")
+
+# Load model with custom objects (only once)
+log("Loading model...")
+model = load_model(
+    MODEL_PATH, 
+    compile=False, 
+    custom_objects={"DepthwiseConv2D": CustomDepthwiseConv2D}
+)
+log("Model loaded successfully.")
+
+# Load labels
 with open(LABELS_PATH, "r") as f:
     class_labels = [line.strip() for line in f.readlines()]
+log(f"Loaded {len(class_labels)} class labels: {class_labels}")
 
-
-import cv2
-
-def main():
-    
-    if not cv2.VideoCapture(0).isOpened():
-        print("Error: Camera not accessible")
-        return
-    
-    cap = cv2.VideoCapture(0)
-
-
-
-def predict_on_image(model, image_path=None):
-    """Run model prediction on an image or live feed frame."""
+def predict_on_image(image_path: str):
+    """Run model prediction on a single image and return a dict with results."""
     try:
-        
-        if image_path is not None:
-            img = cv2.imread(image_path)
-        else:
-            ret, img = cap.read()
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
 
-        # Preprocess the frame
-        if not ret:
-            raise ValueError("Failed to capture frame from webcam")
-        
-        img = cv2.resize(img, (224, 224))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img_array = np.asarray(img, dtype=np.float32) / 127.5 - 1
-        img_array = img_array[None, :, :, :]  # Add batch dimension
+        # Load and preprocess image
+        img = Image.open(image_path).convert('RGB')
+        img = ImageOps.fit(img, (224, 224), Image.Resampling.LANCZOS)
+        img_array = np.asarray(img, dtype=np.float32)
 
-        
-        predictions = model.predict(img_array)
+        # Normalize
+        img_array = (img_array / 127.5) - 1
+        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
 
-       
-        top_class_index = np.argmax(predictions[0])
-        confidence = predictions[0][top_class_index]
+        # Predict
+        predictions = model.predict(img_array, verbose=0)
+        predicted_class_index = np.argmax(predictions[0])
+        predicted_class = class_labels[predicted_class_index]
+        confidence = float(predictions[0][predicted_class_index] * 100)
 
-       
-        top_class_label = class_labels[top_class_index]
-        
-        if confidence > 0.6:  
-            print(f"Predicted: {top_class_label} with confidence {confidence}")
-            cv2.putText(img, f"Prediction: {top_class_label}", (10, 30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        
-        # Display the frame
-        cv2.imshow("Object Detection", img)
+        # Build result
+        result = {
+            "filename": os.path.basename(image_path),
+            "predicted_class": predicted_class,
+            "confidence": confidence,
+            "predictions": {
+                label: float(pred * 100)
+                for label, pred in zip(class_labels, predictions[0])
+            }
+        }
+        return result
 
     except Exception as e:
-        print(f"Error in predict_on_image: {str(e)}")
-
-
-
+        traceback.print_exc(file=sys.stderr)
+        return {"error": str(e)}
+    
 if __name__ == "__main__":
-    # Initialize model loading
-    try:
-        model = load_model(MODEL_PATH) 
-    except Exception as e:
-        print(f"Error loading model: {str(e)}")
-        exit(1)
+    if len(sys.argv) < 2:
+        print("Usage: python predictor.py <image_path>")
+        sys.exit(1)
 
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        print("Error: Camera not accessible")
-        exit(1)
-
-    while True:
-      
-        ret, frame = cap.read()
-
-        if not ret:
-            break
-
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
+    image_path = sys.argv[1]
+    result = predict_on_image(image_path)
+    print(json.dumps(result, indent=2))
