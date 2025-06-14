@@ -5,30 +5,26 @@ import json
 import sys
 import traceback
 from PIL import Image, ImageOps
-from tensorflow.keras.models import load_model # type: ignore
+from tensorflow.keras.models import load_model
 
-# Create a custom DepthwiseConv2D layer that ignores 'groups'
 class CustomDepthwiseConv2D(tf.keras.layers.DepthwiseConv2D):
     def __init__(self, *args, groups=None, **kwargs):
         if 'groups' in kwargs:
             del kwargs['groups']
         super().__init__(*args, **kwargs)
 
-# Helper logger
 def log(message):
     print(f"LOG: {message}", file=sys.stderr)
 
-# Global paths
+
 MODEL_PATH = os.path.join("keras_model.h5")
 LABELS_PATH = os.path.join("labels.txt")
 
-# Verify existence of model and labels
 if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Model file not found: {MODEL_PATH}")
 if not os.path.exists(LABELS_PATH):
     raise FileNotFoundError(f"Labels file not found: {LABELS_PATH}")
 
-# Load model with custom objects (only once)
 log("Loading model...")
 model = load_model(
     MODEL_PATH, 
@@ -48,7 +44,6 @@ def predict_on_image(image_path: str):
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image file not found: {image_path}")
 
-        # Load and preprocess image
         img = Image.open(image_path).convert('RGB')
         img = ImageOps.fit(img, (224, 224), Image.Resampling.LANCZOS)
         img_array = np.asarray(img, dtype=np.float32)
