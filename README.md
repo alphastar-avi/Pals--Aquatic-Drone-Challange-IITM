@@ -12,7 +12,7 @@
 
 https://github.com/user-attachments/assets/670c3c9f-7b20-4f25-bc88-252d13476502
 
-# mavlink protocol for obstacle avoidance and waypoint 
+# mavlink protocol for obstacle avoidance and waypoint : Pixhawk Connectvity 
 
 
 
